@@ -9,7 +9,7 @@ trait StaticResources extends HttpService {
       redirect("/index.html", StatusCodes.MovedPermanently)
     } ~
     path("favicon.ico") {
-      complete(StatusCodes.NotFound)
+      redirect("images/favicon.ico", StatusCodes.MovedPermanently)
     } ~
     path(Rest) {
       path => getFromResource("www/%s" format path)
