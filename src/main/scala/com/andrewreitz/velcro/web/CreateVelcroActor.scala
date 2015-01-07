@@ -1,6 +1,6 @@
 package com.andrewreitz.velcro.web
 
-import java.io.{FilenameFilter, File}
+import java.io.File
 import java.nio.file.Files
 
 import akka.actor.Actor
@@ -21,10 +21,6 @@ object CreateVelcroActor {
 class CreateVelcroActor extends Actor {
   import com.andrewreitz.velcro.web.CreateVelcroActor._
 
-  private val pomFileFilter = new FilenameFilter {
-    override def accept(dir: File, name: String): Boolean = "pom.xml" == name
-  }
-
   def receive = {
     case Create(pi) =>
       // Create a temp dir to dump maven output in
@@ -34,27 +30,16 @@ class CreateVelcroActor extends Actor {
       tempDir.toFile.deleteOnExit()
 
       // Use maven to generate a new velcro project with the values provided
-      Process(s"mvn archetype:generate -B -DarchetypeArtifactId=velcro -DarchetypeGroupId=com.andrewreitz.velcro -DgroupId=${pi.groupId} -DartifactId=${pi.artifactId} -DapplicationName=${pi.appName} -Dversion=1.0", tempDir.toFile).run(connectInput = false).exitValue()
+      Process(s"lazybones create velcro -PpackageName=${pi.groupId} -PapplicationName=${pi.appName} ${pi.appName}", tempDir.toFile).run(connectInput = false).exitValue()
 
       // Get the generated maven file
       val mavenOutput = tempDir.toFile.listFiles()(0)
-
-      // Remove the unneeded maven file
-      deletePomFiles(mavenOutput)
 
       // Zip it up
       val outFile: File = archiveDir(mavenOutput)
 
       // Send it out
       sender ! Ok(new ZipInfo(outFile, pi.artifactId))
-  }
-
-  /**
-   * Delete any pom.xml out of the directory passed in
-   */
-  private def deletePomFiles(directory: File) {
-    val pomFiles = directory.listFiles(pomFileFilter)
-    pomFiles.foreach(_.delete())
   }
 
   def archiveDir(input: File): File = {
